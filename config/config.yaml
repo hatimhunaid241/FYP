@@ -1,0 +1,128 @@
+# HKTVmall Semantic Search Configuration
+
+# Data Collection
+data_collection:
+  target_products: 50000
+  products_per_keyword: 5000
+  max_reviews_per_product: 100
+  api_delay_seconds: 0.5  # Rate limiting
+  save_raw_responses: true
+
+# Keywords - 10 ambiguous keywords for testing
+keywords:
+  seed_keywords:
+    - "apple"
+    - "samsung"
+    - "xiaomi"
+    - "milk"
+    - "oil"
+    - "mask"
+    - "speaker"
+    - "battery"
+    - "charger"
+    - "fan"
+
+# Text Preprocessing
+preprocessing:
+  # Language detection threshold
+  min_confidence: 0.7
+  
+  # English processing
+  english:
+    lowercase: true
+    remove_stopwords: true
+    lemmatization: true
+  
+  # Chinese processing
+  chinese:
+    segmentation: "jieba"
+    traditional_to_simplified: true
+    remove_stopwords: true
+
+# Embeddings
+embeddings:
+  # Model choices (start with one, experiment if time permits)
+  model_name: "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
+  # Alternatives:
+  # - "sentence-transformers/all-MiniLM-L6-v2"  # English only, faster
+  # - "intfloat/multilingual-e5-large"  # Better multilingual
+  
+  batch_size: 32
+  max_seq_length: 256
+  normalize_embeddings: true
+  use_gpu: true
+
+# Clustering
+clustering:
+  # Phase 1: K-Means (simple, fast)
+  kmeans:
+    n_clusters: 20
+    random_state: 42
+    max_iter: 300
+  
+  # Phase 2: HDBSCAN (if time permits)
+  hdbscan:
+    min_cluster_size: 50
+    min_samples: 10
+    metric: "euclidean"
+    cluster_selection_epsilon: 0.5
+  
+  # Dimensionality reduction (optional)
+  reduce_dims: false
+  umap:
+    n_components: 50
+    n_neighbors: 15
+    min_dist: 0.1
+
+# Sentiment Analysis
+sentiment:
+  enabled: false  # Enable in Phase 5
+  model_name: "nlptown/bert-base-multilingual-uncased-sentiment"
+  batch_size: 16
+
+# Quality Scoring
+quality_score:
+  weights:
+    rating: 0.40
+    sentiment: 0.30
+    review_count: 0.20
+    consistency: 0.10
+
+# Semantic Search
+search:
+  top_k_results: 50
+  similarity_metric: "cosine"
+  cluster_results: true
+
+# Evaluation
+evaluation:
+  # Manual labeling sample size
+  manual_sample_size: 200
+  
+  # Metrics to compute
+  clustering_metrics:
+    - "silhouette"
+    - "calinski_harabasz"
+    - "davies_bouldin"
+  
+  search_metrics:
+    - "precision_at_k"
+    - "ndcg"
+    - "mrr"
+
+# Paths
+paths:
+  data_dir: "data"
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  embeddings_dir: "data/embeddings"
+  results_dir: "results"
+  experiments_dir: "experiments"
+
+# Logging
+logging:
+  level: "INFO"
+  log_file: "logs/project.log"
+
+# Random seed for reproducibility
+random_seed: 42
