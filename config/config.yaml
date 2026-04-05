@@ -1,128 +1,116 @@
 # HKTVmall Semantic Search Configuration
+# ============================================================
+# Central config — all scripts read from here.
+#
+# ARCHITECTURE (per-keyword):
+#   Each keyword is treated as an independent pipeline.
+#   Products, embeddings, and clusters are stored under
+#   data/processed/<keyword>/ so that:
+#     - Clustering is done on the ~1000 results for THAT keyword only
+#     - At search time the user's query maps to one keyword bucket
+#     - Results are presented as labelled clusters of that keyword
+# ============================================================
 
-# Data Collection
+# ── Data Collection ──────────────────────────────────────────
 data_collection:
-  target_products: 50000
-  products_per_keyword: 5000
-  max_reviews_per_product: 100
-  api_delay_seconds: 0.5  # Rate limiting
-  save_raw_responses: true
+  products_per_keyword: 1000     # ~1 000 products per keyword
+  api_delay_seconds: 0.5         # polite rate-limiting
+  save_raw_responses: false      # set true to keep raw JSON pages
 
-# Keywords - 10 ambiguous keywords for testing
+# ── Keywords ─────────────────────────────────────────────────
+# 20 semantically-ambiguous bilingual keywords.
+# Each keyword gets its own collection + clustering pipeline.
 keywords:
   seed_keywords:
-    - "apple"
+    # Electronics / tech
+    - "apple"         # fruit  OR  Apple Inc.
     - "samsung"
     - "xiaomi"
-    - "milk"
-    - "oil"
-    - "mask"
     - "speaker"
     - "battery"
     - "charger"
-    - "fan"
+    - "fan"           # cooling fan  OR  handheld fan
+    - "camera"
+    - "headphone"
+    - "cable"
+    # Food / household
+    - "milk"
+    - "oil"           # cooking  OR  essential  OR  motor
+    - "mask"          # face mask (beauty)  OR  surgical mask
+    - "tea"
+    - "coffee"
+    # Health / beauty
+    - "cream"         # skincare  OR  food cream
+    - "vitamin"
+    - "protein"
+    # General / ambiguous
+    - "brush"         # makeup  OR  toothbrush  OR  paint
+    - "bag"
 
-# Text Preprocessing
+# ── Text Preprocessing ───────────────────────────────────────
 preprocessing:
-  # Language detection threshold
-  min_confidence: 0.7
-  
-  # English processing
   english:
     lowercase: true
-    remove_stopwords: true
-    lemmatization: true
-  
-  # Chinese processing
+    remove_stopwords: false
   chinese:
     segmentation: "jieba"
     traditional_to_simplified: true
-    remove_stopwords: true
+    remove_stopwords: false
 
-# Embeddings
+# ── Embeddings ───────────────────────────────────────────────
 embeddings:
-  # Model choices (start with one, experiment if time permits)
+  # Multilingual model — handles EN + ZH queries and products.
   model_name: "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
-  # Alternatives:
-  # - "sentence-transformers/all-MiniLM-L6-v2"  # English only, faster
-  # - "intfloat/multilingual-e5-large"  # Better multilingual
-  
-  batch_size: 32
-  max_seq_length: 256
+  batch_size: 64
   normalize_embeddings: true
   use_gpu: true
 
-# Clustering
+# ── Clustering (per-keyword) ─────────────────────────────────
 clustering:
-  # Phase 1: K-Means (simple, fast)
   kmeans:
-    n_clusters: 20
+    # auto_k: sweep k_min..k_max per keyword, pick best silhouette.
+    auto_k: true
+    k_min: 2
+    k_max: 15          # upper bound kept low — each keyword has ~1 000 products
+    n_clusters: 5      # fallback when auto_k is false
     random_state: 42
     max_iter: 300
-  
-  # Phase 2: HDBSCAN (if time permits)
-  hdbscan:
-    min_cluster_size: 50
-    min_samples: 10
-    metric: "euclidean"
-    cluster_selection_epsilon: 0.5
-  
-  # Dimensionality reduction (optional)
-  reduce_dims: false
-  umap:
-    n_components: 50
-    n_neighbors: 15
-    min_dist: 0.1
+    n_init: 10
 
-# Sentiment Analysis
-sentiment:
-  enabled: false  # Enable in Phase 5
-  model_name: "nlptown/bert-base-multilingual-uncased-sentiment"
-  batch_size: 16
-
-# Quality Scoring
-quality_score:
-  weights:
-    rating: 0.40
-    sentiment: 0.30
-    review_count: 0.20
-    consistency: 0.10
-
-# Semantic Search
+# ── Search ───────────────────────────────────────────────────
 search:
-  top_k_results: 50
+  top_k_results: 10
   similarity_metric: "cosine"
-  cluster_results: true
+  # Cluster-label boost: tiny tie-breaker, does NOT dominate cosine score
+  cluster_label_boost: true
+  cluster_label_weight: 0.05
 
-# Evaluation
+# ── Evaluation ───────────────────────────────────────────────
 evaluation:
-  # Manual labeling sample size
-  manual_sample_size: 200
-  
-  # Metrics to compute
-  clustering_metrics:
-    - "silhouette"
-    - "calinski_harabasz"
-    - "davies_bouldin"
-  
-  search_metrics:
-    - "precision_at_k"
-    - "ndcg"
-    - "mrr"
+  top_k: 10
 
-# Paths
+# ── File Paths ───────────────────────────────────────────────
+# Root directories — per-keyword artefacts live under processed_dir/<keyword>/
 paths:
-  data_dir: "data"
-  raw_dir: "data/raw"
-  processed_dir: "data/processed"
-  embeddings_dir: "data/embeddings"
-  results_dir: "results"
-  experiments_dir: "experiments"
+  raw_dir:            "data/raw"
+  processed_dir:      "data/processed"   # per-keyword subdirs created here
+  results_dir:        "results"
+  logs_dir:           "logs"
 
-# Logging
+  # Per-keyword filename templates (keyword slug substituted at runtime)
+  # These are used by helper function keyword_paths() in config_loader.py
+  kw_products_parquet:        "products.parquet"
+  kw_embeddings_npy:          "product_embeddings.npy"
+  kw_embeddings_parquet:      "products_with_embeddings.parquet"
+  kw_clusters_csv:            "kmeans_clusters.csv"
+  kw_clusters_labeled_csv:    "clusters_labeled.csv"
+  kw_cluster_labels_csv:      "cluster_labels.csv"
+  kw_elbow_plot:              "kmeans_elbow.png"
+
+# ── Logging ──────────────────────────────────────────────────
 logging:
   level: "INFO"
-  log_file: "logs/project.log"
+  log_file: "logs/pipeline.log"
 
-# Random seed for reproducibility
+# ── Reproducibility ──────────────────────────────────────────
 random_seed: 42

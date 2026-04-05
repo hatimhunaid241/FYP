@@ -1,334 +1,322 @@
+"""
+Per-Keyword K-Means Clustering
+================================
+For each keyword, runs K-Means on that keyword's embedding matrix and writes:
+
+    data/processed/<keyword>/kmeans_clusters.csv   — products + cluster column
+    data/processed/<keyword>/kmeans_elbow.png       — elbow + silhouette chart
+
+Optimal K is selected per keyword via an elbow + silhouette sweep.
+Because each keyword has only ~1 000 products the sweep is fast and
+k_max is capped at 15 (sensible upper bound for ~1 000 items).
+
+Run from the project root:
+    python src/clustering/kmeans_cluster.py
+    python src/clustering/kmeans_cluster.py --keywords apple milk
+    python src/clustering/kmeans_cluster.py --n_clusters 5 --keywords fan
+"""
+
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+
+import warnings
+
+warnings.filterwarnings("ignore")
+
+from typing import Any, Dict, Optional
+
 import numpy as np
 import pandas as pd
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
-from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import seaborn as sns
-from typing import Optional, Tuple, Dict, Any
-import warnings
-warnings.filterwarnings('ignore')
+from sklearn.cluster import KMeans
+from sklearn.metrics import (
+    calinski_harabasz_score,
+    davies_bouldin_score,
+    silhouette_score,
+)
 
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from src.utils.config_loader import load_config, keyword_paths
+from src.utils.logger import setup_logger
+
+logger = setup_logger(__name__, log_file="logs/kmeans_cluster.log")
 
 
-def perform_kmeans_clustering(
-    embeddings_path: str = 'data/processed/product_embeddings.npy',
-    products_path: str = 'data/processed/products.csv',
-    n_clusters: int = 10,
-    random_state: int = 42,
-    standardize: bool = False,
-    output_path: str = 'data/processed/kmeans_clusters.csv',
-    visualize: bool = True,
-    **kwargs
-) -> Tuple[pd.DataFrame, Dict[str, Any]]:
-    """
-    Perform K-means clustering on product embeddings.
+def _dominant_category(series: pd.Series) -> str:
+    counts = series.value_counts()
+    return str(counts.index[0]) if len(counts) > 0 else "unknown"
 
-    Args:
-        embeddings_path: Path to the .npy file containing embeddings
-        products_path: Path to the CSV file containing product data
-        n_clusters: Number of clusters to create
-        random_state: Random state for reproducibility
-        standardize: Whether to standardize embeddings before clustering
-        output_path: Path to save cluster assignments
-        visualize: Whether to create visualizations
-        **kwargs: Additional parameters for KMeans
 
-    Returns:
-        Tuple of (clustered_data, metrics_dict)
-    """
-    # Load data
-    print(f"Loading embeddings from {embeddings_path}")
-    embeddings = np.load(embeddings_path)
+# ── Optimal-K sweep ───────────────────────────────────────────────────── #
 
-    print(f"Loading product data from {products_path}")
-    products = pd.read_csv(products_path)
 
-    print(f"Loaded {len(embeddings)} embeddings with {embeddings.shape[1]} dimensions")
-    print(f"Loaded {len(products)} products")
+def find_optimal_k(
+    embeddings: np.ndarray,
+    k_min: int,
+    k_max: int,
+    random_state: int,
+    elbow_plot_path: Path,
+    keyword: str = "",
+) -> tuple[int, dict]:
+    """Sweep K-Means over k_min..k_max; return (best_k, results_dict)."""
+    n = len(embeddings)
+    # With ~1 000 products silhouette on the full set is fast
+    sil_sample = min(n, 1000)
+    rng = np.random.default_rng(random_state)
+    sil_idx = rng.choice(n, size=sil_sample, replace=False)
 
-    # Standardize if requested
-    if standardize:
-        print("Standardizing embeddings...")
-        scaler = StandardScaler()
-        embeddings_scaled = scaler.fit_transform(embeddings)
-    else:
-        embeddings_scaled = embeddings
+    results: Dict[int, Dict[str, Any]] = {}
+    for k in range(k_min, k_max + 1):
+        km = KMeans(n_clusters=k, random_state=random_state, n_init=10)
+        labels = km.fit_predict(embeddings)
+        try:
+            sil = float(silhouette_score(embeddings[sil_idx], labels[sil_idx]))
+        except Exception:
+            sil = None
+        try:
+            ch = float(calinski_harabasz_score(embeddings, labels))
+            db = float(davies_bouldin_score(embeddings, labels))
+        except Exception:
+            ch = db = None
+        results[k] = {
+            "inertia": float(km.inertia_),
+            "silhouette_score": sil,
+            "calinski_harabasz_score": ch,
+            "davies_bouldin_score": db,
+        }
 
-    # Perform K-means clustering
-    print(f"Performing K-means clustering with {n_clusters} clusters...")
-    kmeans = KMeans(
-        n_clusters=n_clusters,
-        random_state=random_state,
-        n_init=10,
-        **kwargs
+    valid = {k: v for k, v in results.items() if v["silhouette_score"] is not None}
+    best_k = max(valid, key=lambda k: valid[k]["silhouette_score"]) if valid else k_min
+    logger.info(
+        f"  [{keyword}] Best K={best_k} "
+        f"(silhouette={results[best_k]['silhouette_score']:.4f})"
     )
 
-    cluster_labels = kmeans.fit_predict(embeddings_scaled)
+    # Elbow plot
+    ks = list(results.keys())
+    inertias = [results[k]["inertia"] for k in ks]
+    sils = [results[k]["silhouette_score"] for k in ks]
 
-    # Calculate evaluation metrics
-    print("Calculating clustering metrics...")
-    n_samples = len(embeddings_scaled)
+    elbow_plot_path.parent.mkdir(parents=True, exist_ok=True)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+    ax1.plot(ks, inertias, "bo-", ms=5)
+    ax1.axvline(best_k, color="red", ls="--", label=f"Best K={best_k}")
+    ax1.set(xlabel="K", ylabel="Inertia", title=f"'{keyword}' — Elbow")
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
 
-    # Skip silhouette score for large datasets (> 5000 samples) as it's computationally expensive
-    if n_samples > 5000:
-        print(f"Skipping silhouette score calculation for large dataset ({n_samples} samples)")
-        silhouette = None
+    valid_ks = [k for k in ks if results[k]["silhouette_score"] is not None]
+    valid_sils = [results[k]["silhouette_score"] for k in valid_ks]
+    ax2.plot(valid_ks, valid_sils, "ro-", ms=5)
+    ax2.axvline(best_k, color="blue", ls="--", label=f"Best K={best_k}")
+    ax2.set(xlabel="K", ylabel="Silhouette", title=f"'{keyword}' — Silhouette")
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(elbow_plot_path, dpi=130, bbox_inches="tight")
+    plt.close()
+    logger.info(f"  [{keyword}] Elbow plot → {elbow_plot_path}")
+
+    return best_k, results
+
+
+# ── Per-keyword clustering ────────────────────────────────────────────── #
+
+
+def cluster_keyword(
+    keyword: str,
+    config: dict,
+    n_clusters: Optional[int] = None,
+    visualize: bool = True,
+) -> tuple[pd.DataFrame, dict]:
+    """
+    Run K-Means on one keyword's embeddings and save results.
+
+    Returns (clustered_df, metrics_dict).
+    """
+    paths = keyword_paths(keyword, config)
+    km_cfg = config["clustering"]["kmeans"]
+    random_state = km_cfg.get("random_state", 42)
+    auto_k = km_cfg.get("auto_k", True)
+    k_min = km_cfg.get("k_min", 2)
+    k_max = km_cfg.get("k_max", 15)
+
+    if not paths["embeddings_npy"].exists():
+        raise FileNotFoundError(
+            f"Embeddings not found for '{keyword}' at {paths['embeddings_npy']}. "
+            "Run embedding_generator.py first."
+        )
+    if not paths["embeddings_parquet"].exists():
+        raise FileNotFoundError(
+            f"Product parquet not found for '{keyword}' at {paths['embeddings_parquet']}."
+        )
+
+    embeddings = np.load(paths["embeddings_npy"])
+    products = pd.read_parquet(paths["embeddings_parquet"])
+
+    if len(embeddings) != len(products):
+        raise ValueError(
+            f"[{keyword}] Length mismatch: {len(embeddings)} embeddings "
+            f"vs {len(products)} products."
+        )
+
+    logger.info(
+        f"  [{keyword}] {len(products):,} products, embedding dim={embeddings.shape[1]}"
+    )
+
+    # Determine K
+    if n_clusters is not None:
+        best_k = n_clusters
+        sweep_results: dict = {}
+    elif auto_k:
+        best_k, sweep_results = find_optimal_k(
+            embeddings,
+            k_min,
+            k_max,
+            random_state,
+            elbow_plot_path=paths["elbow_plot"],
+            keyword=keyword,
+        )
     else:
-        try:
-            silhouette = silhouette_score(embeddings_scaled, cluster_labels)
-        except Exception as e:
-            print(f"Warning: Could not calculate silhouette score: {e}")
-            silhouette = None
+        best_k = km_cfg.get("n_clusters", 5)
+        sweep_results = {}
 
+    # Fit final K-Means
+    km = KMeans(
+        n_clusters=best_k,
+        random_state=random_state,
+        n_init=km_cfg.get("n_init", 10),
+        max_iter=km_cfg.get("max_iter", 300),
+    )
+    cluster_labels_arr = km.fit_predict(embeddings)
+
+    # Metrics
+    sil_sample = min(len(embeddings), 1000)
+    rng = np.random.default_rng(random_state)
+    sil_idx = rng.choice(len(embeddings), sil_sample, replace=False)
     try:
-        ch_score = calinski_harabasz_score(embeddings_scaled, cluster_labels)
-        db_score = davies_bouldin_score(embeddings_scaled, cluster_labels)
-    except Exception as e:
-        print(f"Warning: Could not calculate all metrics: {e}")
+        silhouette = float(
+            silhouette_score(embeddings[sil_idx], cluster_labels_arr[sil_idx])
+        )
+    except Exception:
+        silhouette = None
+    try:
+        ch_score = float(calinski_harabasz_score(embeddings, cluster_labels_arr))
+        db_score = float(davies_bouldin_score(embeddings, cluster_labels_arr))
+    except Exception:
         ch_score = db_score = None
 
-    # Create results DataFrame
+    sil_str = f"{silhouette:.4f}" if silhouette is not None else "N/A"
+    logger.info(
+        f"  [{keyword}] K={best_k}  silhouette={sil_str}  inertia={km.inertia_:.1f}"
+    )
+
+    # Build results DataFrame
     results_df = products.copy()
-    results_df['cluster'] = cluster_labels
-    results_df['cluster'] = results_df['cluster'].astype('category')
+    results_df["cluster"] = cluster_labels_arr.astype(int)
 
-    # Add cluster centers info
-    cluster_centers = kmeans.cluster_centers_
+    # Cluster stats (safe: no lambda)
+    agg: Dict = {"cluster": ["count"]}
+    if "price" in results_df.columns:
+        agg["price"] = ["mean"]
+    if "average_rating" in results_df.columns:
+        agg["average_rating"] = ["mean"]
 
-    # Calculate cluster sizes and statistics
-    cluster_stats = results_df.groupby('cluster').agg({
-        'keyword_source': lambda x: x.value_counts().index[0],  # Most common category
-        'price': ['count', 'mean', 'std'],
-        'average_rating': ['mean', 'std']
-    }).round(2)
-
-    cluster_stats.columns = ['_'.join(col).strip() for col in cluster_stats.columns.values]
-    cluster_stats = cluster_stats.rename(columns={
-        'keyword_source_<lambda_0>': 'dominant_category',
-        'price_count': 'size',
-        'price_mean': 'avg_price',
-        'price_std': 'price_std',
-        'average_rating_mean': 'avg_rating',
-        'average_rating_std': 'rating_std'
-    })
-
-    # Metrics dictionary
-    metrics = {
-        'n_clusters': n_clusters,
-        'silhouette_score': silhouette,
-        'calinski_harabasz_score': ch_score,
-        'davies_bouldin_score': db_score,
-        'inertia': kmeans.inertia_,
-        'cluster_sizes': results_df['cluster'].value_counts().sort_index().tolist(),
-        'cluster_stats': cluster_stats.to_dict()
+    metrics: Dict[str, Any] = {
+        "keyword": keyword,
+        "n_clusters": best_k,
+        "n_products": len(results_df),
+        "silhouette_score": silhouette,
+        "calinski_harabasz_score": ch_score,
+        "davies_bouldin_score": db_score,
+        "inertia": float(km.inertia_),
+        "cluster_sizes": results_df["cluster"].value_counts().sort_index().to_dict(),
     }
 
-    # Save results
-    if output_path:
-        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-        results_df.to_csv(output_path, index=False)
-        print(f"Saved clustered data to {output_path}")
+    # Save
+    results_df.to_csv(paths["clusters_csv"], index=False, encoding="utf-8-sig")
+    logger.info(f"  [{keyword}] Saved → {paths['clusters_csv']}")
 
-    # Print summary
-    print(f"\nClustering Results:")
-    print(f"Number of clusters: {n_clusters}")
-    print(f"Silhouette Score: {silhouette:.3f}" if silhouette else "Silhouette Score: N/A")
-    print(f"Calinski-Harabasz Score: {ch_score:.2f}" if ch_score else "Calinski-Harabasz Score: N/A")
-    print(f"Davies-Bouldin Score: {db_score:.3f}" if db_score else "Davies-Bouldin Score: N/A")
-    print(f"Inertia: {kmeans.inertia_:.2f}")
-    print(f"\nCluster sizes: {metrics['cluster_sizes']}")
-
-    # Create visualizations if requested
     if visualize:
-        create_clustering_visualizations(results_df, embeddings_scaled, cluster_labels, n_clusters)
+        _visualize_keyword_clusters(keyword, results_df, best_k, config)
 
     return results_df, metrics
 
 
-def create_clustering_visualizations(
-    data: pd.DataFrame,
-    embeddings: np.ndarray,
-    labels: np.ndarray,
-    n_clusters: int,
-    output_dir: str = 'data/processed'
-):
-    """Create visualizations for clustering results."""
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
+def _visualize_keyword_clusters(
+    keyword: str, df: pd.DataFrame, k: int, config: dict
+) -> None:
+    fig_dir = Path(config["paths"]["results_dir"]) / "figures"
+    fig_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Cluster distribution
-    plt.figure(figsize=(10, 6))
-    cluster_counts = data['cluster'].value_counts().sort_index()
-    sns.barplot(x=cluster_counts.index, y=cluster_counts.values)
-    plt.title(f'Cluster Size Distribution (K={n_clusters})')
-    plt.xlabel('Cluster')
-    plt.ylabel('Number of Products')
-    plt.savefig(f'{output_dir}/cluster_sizes.png', dpi=150, bbox_inches='tight')
-    plt.close()
-
-    # 2. Price distribution by cluster
-    plt.figure(figsize=(12, 6))
-    sns.boxplot(data=data, x='cluster', y='price')
-    plt.title(f'Price Distribution by Cluster (K={n_clusters})')
-    plt.xlabel('Cluster')
-    plt.ylabel('Price')
-    plt.xticks(rotation=45)
-    plt.savefig(f'{output_dir}/price_by_cluster.png', dpi=150, bbox_inches='tight')
-    plt.close()
-
-    # 3. Rating distribution by cluster
-    plt.figure(figsize=(12, 6))
-    sns.boxplot(data=data, x='cluster', y='average_rating')
-    plt.title(f'Rating Distribution by Cluster (K={n_clusters})')
-    plt.xlabel('Cluster')
-    plt.ylabel('Average Rating')
-    plt.xticks(rotation=45)
-    plt.savefig(f'{output_dir}/rating_by_cluster.png', dpi=150, bbox_inches='tight')
-    plt.close()
-
-    # 4. Category distribution by cluster (heatmap)
-    if 'keyword_source' in data.columns:
-        plt.figure(figsize=(12, 8))
-        cluster_category = pd.crosstab(data['cluster'], data['keyword_source'], normalize='index')
-        sns.heatmap(cluster_category, annot=True, fmt='.2f', cmap='Blues')
-        plt.title(f'Category Distribution by Cluster (K={n_clusters})')
-        plt.xlabel('Category')
-        plt.ylabel('Cluster')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.savefig(f'{output_dir}/category_by_cluster.png', dpi=150, bbox_inches='tight')
-        plt.close()
-
-    print(f"Visualizations saved to {output_dir}/")
-
-
-def find_optimal_k(
-    embeddings_path: str = 'data/processed/product_embeddings.npy',
-    k_range: range = range(2, 21),
-    random_state: int = 42,
-    standardize: bool = False,
-    output_path: str = 'data/processed/kmeans_elbow.png'
-) -> Dict[int, Dict[str, float]]:
-    """
-    Find optimal number of clusters using elbow method and silhouette analysis.
-
-    Args:
-        embeddings_path: Path to embeddings file
-        k_range: Range of k values to test
-        random_state: Random state for reproducibility
-        standardize: Whether to standardize embeddings
-        output_path: Path to save elbow plot
-
-    Returns:
-        Dictionary with metrics for each k
-    """
-    # Load embeddings
-    embeddings = np.load(embeddings_path)
-    if standardize:
-        scaler = StandardScaler()
-        embeddings = scaler.fit_transform(embeddings)
-
-    results = {}
-
-    print("Finding optimal k...")
-    for k in k_range:
-        print(f"Testing k={k}")
-        kmeans = KMeans(n_clusters=k, random_state=random_state, n_init=10)
-        labels = kmeans.fit_predict(embeddings)
-
-        # Calculate metrics
-        try:
-            if len(embeddings) <= 5000:
-                silhouette = silhouette_score(embeddings, labels)
-            else:
-                silhouette = None
-            ch_score = calinski_harabasz_score(embeddings, labels)
-            db_score = davies_bouldin_score(embeddings, labels)
-        except:
-            silhouette = ch_score = db_score = None
-
-        results[k] = {
-            'inertia': kmeans.inertia_,
-            'silhouette_score': silhouette,
-            'calinski_harabasz_score': ch_score,
-            'davies_bouldin_score': db_score
-        }
-
-    # Create elbow plot
-    k_values = list(results.keys())
-    inertias = [results[k]['inertia'] for k in k_values]
-    silhouettes = [results[k]['silhouette_score'] for k in k_values if results[k]['silhouette_score'] is not None]
-
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
-
-    # Elbow plot
-    ax1.plot(k_values, inertias, 'bo-')
-    ax1.set_xlabel('Number of Clusters (k)')
-    ax1.set_ylabel('Inertia')
-    ax1.set_title('Elbow Method')
-    ax1.grid(True)
-
-    # Silhouette plot
-    if silhouettes:
-        ax2.plot(k_values[:len(silhouettes)], silhouettes, 'ro-')
-        ax2.set_xlabel('Number of Clusters (k)')
-        ax2.set_ylabel('Silhouette Score')
-        ax2.set_title('Silhouette Analysis')
-        ax2.grid(True)
-
+    plt.figure(figsize=(max(8, k), 4))
+    counts = df["cluster"].value_counts().sort_index()
+    sns.barplot(x=counts.index.astype(str), y=counts.values, palette="viridis")
+    plt.title(f"'{keyword}' — Cluster Size Distribution (K={k})")
+    plt.xlabel("Cluster ID")
+    plt.ylabel("Products")
     plt.tight_layout()
-    plt.savefig(output_path, dpi=150, bbox_inches='tight')
+    plt.savefig(fig_dir / f"cluster_sizes_{keyword}.png", dpi=130, bbox_inches="tight")
     plt.close()
 
-    print(f"Elbow plot saved to {output_path}")
 
-    return results
+# ── Run all keywords ──────────────────────────────────────────────────── #
 
 
-if __name__ == '__main__':
+def cluster_all_keywords(
+    keywords: list[str] | None = None,
+    n_clusters: Optional[int] = None,
+    config_path: str = "config/config.yaml",
+    force: bool = False,
+    visualize: bool = True,
+) -> Dict[str, dict]:
+    """Cluster every keyword independently. Returns {keyword: metrics} dict."""
+    config = load_config(config_path)
+    if keywords is None:
+        keywords = config["keywords"]["seed_keywords"]
+
+    logger.info("=" * 60)
+    logger.info(f"Per-keyword clustering: {len(keywords)} keywords")
+    logger.info("=" * 60)
+
+    all_metrics: Dict[str, dict] = {}
+    for kw in keywords:
+        paths = keyword_paths(kw, config)
+        if not force and paths["clusters_csv"].exists():
+            logger.info(f"  '{kw}' clusters already exist — skipping")
+            continue
+        try:
+            _, metrics = cluster_keyword(
+                kw, config, n_clusters=n_clusters, visualize=visualize
+            )
+            all_metrics[kw] = metrics
+        except Exception as exc:
+            logger.error(f"  '{kw}' failed: {exc}")
+
+    logger.info("Clustering complete.")
+    return all_metrics
+
+
+# ── CLI ───────────────────────────────────────────────────────────────── #
+
+if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description='K-means clustering on product embeddings')
-    parser.add_argument('--n_clusters', type=int, default=10, help='Number of clusters')
-    parser.add_argument('--find_optimal', action='store_true', help='Find optimal k')
-    parser.add_argument('--k_min', type=int, default=2, help='Minimum k for optimal search')
-    parser.add_argument('--k_max', type=int, default=20, help='Maximum k for optimal search')
-    parser.add_argument('--standardize', action='store_true', help='Standardize embeddings')
-    parser.add_argument('--no_visualize', action='store_true', help='Skip visualizations')
-
+    parser = argparse.ArgumentParser(description="Per-keyword K-Means clustering")
+    parser.add_argument("--keywords", nargs="+", default=None)
+    parser.add_argument(
+        "--n_clusters", type=int, default=None, help="Fixed K (skips auto-K sweep)"
+    )
+    parser.add_argument("--force", action="store_true")
+    parser.add_argument("--no_visualize", action="store_true")
     args = parser.parse_args()
 
-    if args.find_optimal:
-        print(f"Finding optimal k from {args.k_min} to {args.k_max}")
-        results = find_optimal_k(
-            k_range=range(args.k_min, args.k_max + 1),
-            standardize=args.standardize
-        )
-
-        # Print results
-        print("\nOptimal k analysis results:")
-        print("k\tInertia\t\tSilhouette\tCH Score\tDB Score")
-        print("-" * 60)
-        for k, metrics in results.items():
-            sil = f"{metrics['silhouette_score']:.3f}" if metrics['silhouette_score'] else "N/A"
-            print(f"{k}\t{metrics['inertia']:.0f}\t\t{sil}\t\t{metrics['calinski_harabasz_score']:.0f}\t\t{metrics['davies_bouldin_score']:.3f}")
-
-    else:
-        print(f"Performing K-means clustering with {args.n_clusters} clusters")
-        clustered_data, metrics = perform_kmeans_clustering(
-            n_clusters=args.n_clusters,
-            standardize=args.standardize,
-            visualize=not args.no_visualize
-        )
-
-        print(f"\nClustering completed with {args.n_clusters} clusters!")
-
-        # Print cluster statistics
-        print("\nCluster Statistics:")
-        cluster_stats = metrics['cluster_stats']
-        for cluster_id, stats in cluster_stats.items():
-            print(f"Cluster {cluster_id}: {stats['size']} products, dominant category: {stats['dominant_category']}, avg price: ${stats['avg_price']:.2f}")
+    cluster_all_keywords(
+        keywords=args.keywords,
+        n_clusters=args.n_clusters,
+        force=args.force,
+        visualize=not args.no_visualize,
+    )

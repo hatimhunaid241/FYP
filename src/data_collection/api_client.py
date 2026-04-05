@@ -39,7 +39,7 @@ class HKTVmallAPIClient:
             'Content-Type': 'application/json'
         })
     
-    def search_products(self, keyword: str, hits_per_page: int = 100, page: int = 0) -> Dict:
+    def search_products(self, keyword: str, hits_per_page: int = 1000, page: int = 0) -> Dict:
         """
         Search for products by keyword using Algolia API
         
