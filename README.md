@@ -69,7 +69,7 @@ If you dont have a compatible GPU, install the CPU-only package (alreadt inlcude
 ### 2. Run the full pipeline
 
 ```bash
-# All 20 keywords, all 7 steps
+# All 20 keywords, all 7 stepsl; this will only take a few minutes with CUDA
 python run_pipeline.py
 
 # Specific keywords only
