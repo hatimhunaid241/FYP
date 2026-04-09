@@ -34,11 +34,37 @@ for "milk" only from milk results, and so on.
 
 ## Quick Start
 
-### 1. Install dependencies
+### 1. Install dependencies and enabling CUDA
 
 ```bash
 pip install -r requirements.txt
 ```
+
+If you have an NVIDIA GPU and want to use CUDA acceleration, install PyTorch with the matching CUDA for your system instead of the generic PyTorch package in requirements.txt. First, verify your GPU supports the CUDA version you want by checking the link:
+
+https://en.wikipedia.org/wiki/CUDA#GPUs_supported
+
+In the above link, find the second table titled "*GPU semiconductors and ... sorted by compute capability*". Find your graphics card model in the table and get its the compute capability (e.g. model GeForce MX450 has 7.5). Then head to the first table titled "*CUDA SDK support ... (cell: compute capability)*" and find which CUDA SDK version supports your compute capability (e.g. 7.5 is supported by CUDA 10.0 to 13.0). 
+
+Now lets install PyTorch for CUDA 13.0 as an example by running:
+
+```bash
+# Uninstall the non-cuda ver of torch
+pip uninstall torch
+
+# Install the torch for your specific cuda version (e.g. PyTorch for CUDA 13.0)
+pip install torch --index-url https://download.pytorch.org/whl/cu130
+```
+
+Finally, verify that you have successfuly enabled CUDA by running:
+
+```bash
+python -c "import torch; print('CUDA available:', torch.cuda.is_available())"
+```
+
+This is not an in-depth guide for enabling CUDA. If the above method doesn't work, please consult other sources. 
+
+If you dont have a compatible GPU, install the CPU-only package (alreadt inlcuded in requirements.txt file). Please note that running some of the code might take a while if you're using CPU-only.
 
 ### 2. Run the full pipeline
 
