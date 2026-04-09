@@ -38,6 +38,15 @@ logger = setup_logger(__name__, log_file="logs/visualization.log")
 # Global style
 sns.set_theme(style="whitegrid", palette="muted", font_scale=1.05)
 plt.rcParams.update({"figure.dpi": 130, "savefig.dpi": 150})
+plt.rcParams["font.family"] = "sans-serif"
+plt.rcParams["font.sans-serif"] = [
+    "Microsoft YaHei",
+    "SimHei",
+    "Noto Sans CJK SC",
+    "Arial Unicode MS",
+    "sans-serif",
+]
+plt.rcParams["axes.unicode_minus"] = False
 
 
 # ── 1. Cluster overlap bar chart ──────────────────────────────────────── #
