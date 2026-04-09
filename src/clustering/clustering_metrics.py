@@ -268,9 +268,12 @@ def plot_silhouette(
 
 if __name__ == "__main__":
     import argparse
-    from src.utils.config_loader import load_config
+    from src.utils.config_loader import load_config, keyword_paths
 
     parser = argparse.ArgumentParser(description="Compute clustering quality metrics")
+    parser.add_argument(
+        "--keyword", default=None, help="Keyword to compute metrics for (uses config paths)"
+    )
     parser.add_argument(
         "--embeddings", default=None, help="Path to product_embeddings.npy"
     )
@@ -290,10 +293,21 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     config = load_config()
-    path_cfg = config["paths"]
 
-    emb_path = args.embeddings or path_cfg["embeddings_npy"]
-    csv_path = args.clusters_csv or path_cfg["clusters_csv"]
+    if args.keyword:
+        # Use keyword-specific paths from config
+        paths = keyword_paths(args.keyword, config)
+        emb_path = str(paths["embeddings_npy"])
+        csv_path = str(paths["clusters_csv"])
+    else:
+        # Use provided paths or fall back to defaults (if they existed)
+        path_cfg = config["paths"]
+        emb_path = args.embeddings
+        csv_path = args.clusters_csv
+        if not emb_path:
+            raise ValueError("Must provide --embeddings path or --keyword")
+        if not csv_path:
+            raise ValueError("Must provide --clusters_csv path or --keyword")
 
     logger.info(f"Loading embeddings from {emb_path}")
     embs = np.load(emb_path)
