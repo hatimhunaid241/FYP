@@ -18,6 +18,9 @@ sentence-transformers>=2.2,<3.0
 jieba>=0.42
 opencc-python-reimplemented>=0.1.7   # import as: from opencc import OpenCC
 
+# ── Configuration ───────────────────────────────────────────────────────
+PyYAML>=6.0
+
 # ── Dimensionality reduction (for embedding visualizations) ──────────────
 umap-learn>=0.5
 
