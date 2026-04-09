@@ -93,7 +93,7 @@ python src/clustering/kmeans_cluster.py --n_clusters 5 --keywords fan  # fixed K
 python src/clustering/cluster_labeling.py --keywords apple
 
 # Step 5: Clustering quality metrics
-python src/clustering/clustering_metrics.py
+python src/clustering/clustering_metrics.py --keyword apple
 
 # Step 6: Semantic vs keyword comparison
 python src/evaluation/search_metrics.py --keywords apple milk
