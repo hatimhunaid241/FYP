@@ -895,6 +895,86 @@ def plot_cluster_distribution_stacked(
     logger.info(f"Saved cluster distribution chart → {output_path}")
 
 
+# ── 6. Average relevance score per cluster ────────────────────────────── #
+
+def plot_mean_score_per_cluster(
+    full_df: pd.DataFrame,
+    keyword: Optional[str] = None,
+    output_path: str = "results/figures/mean_score_per_cluster.png",
+) -> None:
+    """
+    Bar chart showing mean relevance score per semantic cluster.
+    Optionally filters by keyword.
+    """
+    if "cluster" not in full_df.columns or "score" not in full_df.columns:
+        logger.warning("Missing cluster/score columns — skipping mean score chart.")
+        return
+
+    df = full_df[full_df["system"] == "semantic"].copy()
+    
+    if keyword:
+        df = df[df["keyword"].astype(str).str.lower() == keyword.lower()]
+    
+    if df.empty:
+        logger.warning(f"No semantic data for keyword '{keyword}' — skipping mean score chart.")
+        return
+
+    # Calculate mean score per cluster
+    cluster_scores = (
+        df.groupby(["cluster", "cluster_label"])["score"]
+        .mean()
+        .reset_index()
+        .sort_values("cluster")
+    )
+    
+    # Create bar chart
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    bars = ax.bar(
+        range(len(cluster_scores)),
+        cluster_scores["score"],
+        color="#3498db",
+        edgecolor="#2c3e50",
+        linewidth=1.2,
+        alpha=0.8,
+    )
+    
+    # Add value labels on bars
+    for i, (idx, row) in enumerate(cluster_scores.iterrows()):
+        ax.text(i, row["score"] + 0.01, f"{row['score']:.3f}", 
+               ha="center", va="bottom", fontsize=9, fontweight="bold")
+    
+    # Set x-axis labels with cluster_label
+    x_labels = [
+        f"Cluster {int(row['cluster'])}\n{row['cluster_label'][:30]}"
+        for _, row in cluster_scores.iterrows()
+    ]
+    ax.set_xticks(range(len(cluster_scores)))
+    ax.set_xticklabels(x_labels, rotation=45, ha="right", fontsize=9)
+    
+    # Set overall mean line
+    overall_mean = cluster_scores["score"].mean()
+    ax.axhline(overall_mean, color="#e74c3c", linestyle="--", linewidth=2, label=f"Mean: {overall_mean:.3f}")
+    
+    ax.set_ylabel("Average Relevance Score", fontsize=11, fontweight="bold")
+    ax.set_xlabel("Semantic Cluster", fontsize=11, fontweight="bold")
+    
+    title = "Average Relevance Score per Semantic Cluster"
+    if keyword:
+        title += f" ({keyword})"
+    ax.set_title(title, fontsize=13, fontweight="bold", pad=20)
+    
+    ax.set_ylim(0, max(cluster_scores["score"].max() * 1.15, 1.0))
+    ax.grid(axis="y", alpha=0.3)
+    ax.legend(fontsize=10)
+    
+    plt.tight_layout()
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_path, bbox_inches="tight", dpi=150)
+    plt.close()
+    logger.info(f"Saved mean score per cluster chart → {output_path}")
+
+
 # ── Main entry point ──────────────────────────────────────────────────── #
 
 
@@ -986,6 +1066,12 @@ def generate_all_visualizations(
             full_df, keywords=["apple", "milk", "camera", "xiaomi"],
             output_path=f"{output_dir}/cluster_distribution_stacked.png"
         )
+        # Mean score per cluster for selected keywords
+        for kw in ["apple", "milk", "camera", "xiaomi"]:
+            plot_mean_score_per_cluster(
+                full_df, keyword=kw,
+                output_path=f"{output_dir}/mean_score_per_cluster_{kw}.png"
+            )
 
     logger.info(f"All visualizations saved to {output_dir}/")
 

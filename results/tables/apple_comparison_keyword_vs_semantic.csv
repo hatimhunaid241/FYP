@@ -1,0 +1,41 @@
+﻿cluster,cluster_label,rank,semantic_product,semantic_product_zh,semantic_score,keyword_product,keyword_product_zh,keyword_score
+0,苹果 | pcs | fruit | 富士,1,【8pcs】New Zealand / Canada mini Apple蘋果,【8個】紐西蘭/加拿大/小蘋果 (甜爽),0.6461752653121948,American Snake Fruit/Red Apple (4Pcs),美國蛇果/紅蘋果 (4個),0.0592730612374545
+0,苹果 | pcs | fruit | 富士,2,,,,"Promotional fruit pack I (apple, golden pear x4pcs)",優惠生果包I(蘋果、黃金梨x4pcs),0.0558955702272487
+0,苹果 | pcs | fruit | 富士,3,,,,"Fruit Pack B (Fuji Apple x4, Sweet Orange x4)",生果包B(富士蘋果x4、甜橙x4),0.0558426068895201
+0,苹果 | pcs | fruit | 富士,4,,,,Preferential Fruit Pack (Dragon Fruit+Fuji Apple+Golden Pear x2pcs),優惠生果包(火龍果+富士蘋果+黃金梨x2pcs),0.054308487930075
+0,苹果 | pcs | fruit | 富士,5,,,,Popular Fruit Pack (Orange/Apple/Pear x4pcs),熱門生果包(甜橙/蘋果/香梨x4pcs),0.0530563199266553
+1,bands | loop | sport | 毫米,1,42mm Neon Yellow Solo Loop - Size 9,Apple 42 毫米霓虹黃色單圈手環 - 9 號,0.6246901154518127,,,
+1,bands | loop | sport | 毫米,2,42mm Neon Yellow Solo Loop - Size 3,Apple 42 毫米霓虹黃色單圈手環 - 3 號,0.6211929321289062,,,
+1,bands | loop | sport | 毫米,3,42mm Neon Yellow Solo Loop - Size 6,Apple 42 毫米霓虹黃色單圈手環 - 6 號,0.620958685874939,,,
+1,bands | loop | sport | 毫米,4,46mm Neon Yellow Solo Loop - Size 0,Apple 46 毫米霓虹黃色單圈手環 - 0 號,0.6202612519264221,,,
+1,bands | loop | sport | 毫米,5,42mm Neon Yellow Solo Loop - Size 5,Apple 42 毫米霓虹黃色單圈手環 - 5 號,0.6200623512268066,,,
+2,magsafe | iphone | with magsafe | apple iphone,1,,,,iPhone 16 Clear Case with MagSafe,Apple iPhone 16 MagSafe 透明護殼,0.2574681973023364
+2,magsafe | iphone | with magsafe | apple iphone,2,,,,iPhone 16 Silicone Case with MagSafe – Black,Apple iPhone 16 MagSafe 矽膠護殼 – 黑色,0.2504651369957184
+2,magsafe | iphone | with magsafe | apple iphone,3,,,,iPhone 16 Pro Clear Case with MagSafe,Apple iPhone 16 Pro MagSafe 透明護殼,0.2465817897258198
+2,magsafe | iphone | with magsafe | apple iphone,4,,,,iPhone 15 Clear Case with MagSafe,Apple iPhone 15 MagSafe 透明護殼,0.2451923851659213
+2,magsafe | iphone | with magsafe | apple iphone,5,,,,iPhone 16 Plus Clear Case with MagSafe,Apple iPhone 16 Plus MagSafe 透明護殼,0.2403779365158431
+4,苹果 | apples | 水果 | fruit,1,"Pollution-Free, Fresh Delivery | 8-pcs  Apples | Crisp & Delicious",無公害種植新鮮直送  8個裝 蘋果  林檎擷秀  甘脆入頤 ,0.688910722732544,Premium Fuji Apples (4 pcs),特級富士蘋果(4個),0.1115462985909074
+4,苹果 | apples | 水果 | fruit,2,"Pollution-Free, Fresh Delivery | 8-pcs  Apples | Crisp & Delicious",無公害種植新鮮直送  8個裝 蘋果  林檎擷秀  甘脆入頤 ,0.688910722732544,,,
+4,苹果 | apples | 水果 | fruit,3,"Pollution-Free, Fresh Delivery | 5-pcs  Apples | Crisp & Delicious",無公害種植新鮮直送  5個裝 蘋果  林檎擷秀  甘脆入頤 ,0.6850764751434326,,,
+4,苹果 | apples | 水果 | fruit,4,"Pollution-Free, Fresh Delivery | 5-pcs  Apples | Crisp & Delicious",無公害種植新鮮直送  5個裝 蘋果  林檎擷秀  甘脆入頤 ,0.6850764751434326,,,
+4,苹果 | apples | 水果 | fruit,5,US Envy Apple 4 pcs,美國艾菲Envy 蘋果 4個,0.6798899173736572,,,
+6,band | sport band | 表带 | 运动 表带,1,WATCH S11 GPS 42 GD AL BH SP BD S/M,Apple Watch Series 11 智能手錶 GPS 42mm 玫瑰金鋁殼淺粉錶帶S/M,0.6654664278030396,Twelve South TimePorter Apple Watch Band Wall Mount (2 Pack),Twelve South TimePorter Apple Watch 錶帶牆壁掛架 (2 件裝),0.1563271271367353
+7,loop size | size | solo | solo loop,1,Apple Pencil Tips - 4 pack,Apple Pencil 筆尖 - 4 個裝,0.788020133972168,Apple Pencil Tips - 4 pack,Apple Pencil 筆尖 - 4 個裝,0.50110792262716
+7,loop size | size | solo | solo loop,2,46mm Light Blush Solo Loop - Size 8,Apple 46 毫米淡胭脂色單圈手環 - 8 號,0.5564619898796082,46mm Black Solo Loop - Size 4,Apple 46 毫米黑色單圈手環 - 4 號,0.0141082411266495
+7,loop size | size | solo | solo loop,3,46mm Light Blush Solo Loop - Size 1,Apple 46 毫米淡胭脂色單圈手環 - 1 號,0.5561574697494507,46mm Black Solo Loop - Size 0,Apple 46 毫米黑色單圈手環 - 0 號,0.0141082411266495
+7,loop size | size | solo | solo loop,4,46mm Light Blush Solo Loop - Size 0,Apple 46 毫米淡胭脂色單圈手環 - 0 號,0.5544543266296387,46mm Black Solo Loop - Size 8,Apple 46 毫米黑色單圈手環 - 8 號,0.0141082411266495
+7,loop size | size | solo | solo loop,5,46mm Light Blush Solo Loop - Size 3,Apple 46 毫米淡胭脂色單圈手環 - 3 號,0.5539524555206299,46mm Black Solo Loop - Size 3,Apple 46 毫米黑色單圈手環 - 3 號,0.0141082411266495
+8,usb | cable | usb usb | lightning,1,USB-C to Apple Pencil Adapter,Apple USB-C 至 Apple Pencil 轉換器,0.6521586775779724,USB-C to Apple Pencil Adapter,Apple USB-C 至 Apple Pencil 轉換器,0.5297806513605814
+8,usb | cable | usb usb | lightning,2,,,,Apple Watch Magnetic Charging Cable (1 m),Apple Watch 磁力充電線 (1 米),0.2575156201440506
+8,usb | cable | usb usb | lightning,3,,,,Apple Watch Magnetic Charging Cable (1 m),Apple Watch 磁力充電線 (1 米),0.0143392370343913
+9,nike | nike sport | apple nike | are,1,,,,46mm Blue Ribbon Nike Sport Band - M/L,Apple 46 毫米藍帶色 Nike 運動錶帶 - M/L,0.1141304333052534
+9,nike | nike sport | apple nike | are,2,,,,42mm Blue Ribbon Nike Sport Band - S/M,Apple 42 毫米藍帶色 Nike 運動錶帶 - S/M,0.1139390334358669
+9,nike | nike sport | apple nike | are,3,,,,42mm Blue Ribbon Nike Sport Band - M/L,Apple 42 毫米藍帶色 Nike 運動錶帶 - M/L,0.1139390334358669
+9,nike | nike sport | apple nike | are,4,,,,40mm Blue Ribbon Nike Sport Loop,Apple 40 毫米藍帶色 Nike 運動手環,0.1136484993758648
+9,nike | nike sport | apple nike | are,5,,,,42mm Midnight Black Nike Sport Band - S/M,Apple 42 毫米午夜黑色 Nike 運動錶帶 - S/M,0.1133546868477845
+11,strap | the,1,Scosche WatchIt Keychain Apple Watch Magnetic Fast Charger - White,Scosche WatchIt Keychain Apple Watch 磁力快速充電器 - 白色,0.7091035842895508,,,
+12,airtag | air | iphone | macbook,1,Smart Folio for iPad (A16) – Lemonade,Apple 智慧型摺套適用於 iPad (A16) - 鮮檸色,0.6273236274719238,Logitech Crayon for iPad,Logitech Crayon 適用於 iPad,0.21641965116
+12,airtag | air | iphone | macbook,2,iPad A16 (2025)  Wi-Fi 256GB silver Apple ,Apple iPad A16 (2025)  Wi-Fi 平板電腦 256GB 銀色,0.6257587671279907,,,
+12,airtag | air | iphone | macbook,3,Logitech Crayon for iPad,Logitech Crayon 適用於 iPad,0.6236312985420227,,,
+12,airtag | air | iphone | macbook,4,Smart Folio for iPad mini (A17 Pro) - Denim,Apple 智慧型摺套適用於 iPad mini (A17 Pro) - 丹寧色,0.6235558986663818,,,
+12,airtag | air | iphone | macbook,5,Smart Folio for iPad (A16) – Watermelon,Apple 智慧型摺套適用於 iPad (A16) - 西瓜色,0.6224440932273865,,,

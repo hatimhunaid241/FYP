@@ -49,7 +49,6 @@ def build_top_products_by_cluster(
                     "rank": rank,
                     "name_en": row.name_en,
                     "name_zh": row.name_zh,
-                    "average_rating": row.average_rating,
                     "score": row.score,
                     "query_with_max_score": row.query,
                 }
