@@ -227,13 +227,18 @@ def plot_silhouette(
 
     fig, ax = plt.subplots(figsize=(10, max(6, n_clusters // 2)))
     y_lower = 10
+    cmap = plt.cm.get_cmap("nipy_spectral", n_clusters)
+    cluster_color_map = {
+        cid: cmap(idx)
+        for idx, cid in enumerate(unique_clusters)
+    }
 
     for cid in unique_clusters:
         c_vals = np.sort(sil_vals[lab_s == cid])
         c_size = len(c_vals)
         y_upper = y_lower + c_size
 
-        color = plt.cm.nipy_spectral(float(cid) / n_clusters)
+        color = cluster_color_map[cid]
         ax.fill_betweenx(
             np.arange(y_lower, y_upper),
             0,
