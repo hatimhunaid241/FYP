@@ -191,6 +191,7 @@ def visualize_keyword(
     fig_dir = Path(config["paths"]["results_dir"]) / "figures"
     fig_dir.mkdir(parents=True, exist_ok=True)
 
+    # Build plot dataframe with cluster information if available
     plot_df = pd.DataFrame(
         {
             "x": coords[:, 0],
@@ -198,21 +199,72 @@ def visualize_keyword(
             "name": df_s.get("name_en", df_s.get("name_zh", "")),
         }
     )
-    fig = px.scatter(
-        plot_df,
-        x="x",
-        y="y",
-        hover_data=["name"],
-        title=f"'{keyword}' embeddings — {label}",
-    )
-    fig.write_html(fig_dir / f"embeddings_{keyword}_{method}.html")
-
-    plt.figure(figsize=(9, 7))
-    plt.scatter(coords[:, 0], coords[:, 1], s=20, alpha=0.6)
-    plt.title(f"'{keyword}' embeddings — {label}")
-    plt.tight_layout()
-    plt.savefig(fig_dir / f"embeddings_{keyword}_{method}.png", dpi=130)
-    plt.close()
+    
+    # Try to load cluster assignments
+    cluster_file = paths["clusters_csv"]
+    if cluster_file.exists():
+        clusters_df = pd.read_csv(cluster_file)
+        # Map clusters by product_id
+        product_id_to_cluster = dict(zip(clusters_df["product_id"], clusters_df["cluster"]))
+        plot_df["cluster"] = df_s["product_id"].map(product_id_to_cluster).fillna(-1).astype(int)
+        
+        # Plotly scatter with cluster coloring
+        fig = px.scatter(
+            plot_df,
+            x="x",
+            y="y",
+            color="cluster",
+            hover_data=["name", "cluster"],
+            title=f"'{keyword}' embeddings — {label}",
+            color_continuous_scale="Viridis",
+        )
+        fig.write_html(fig_dir / f"embeddings_{keyword}_{method}.html")
+        
+        # Matplotlib scatter with cluster coloring
+        plt.figure(figsize=(10, 8))
+        clusters = sorted(plot_df["cluster"].unique())
+        colors = sns.color_palette("husl", len(clusters))
+        cluster_colors = {c: colors[i] for i, c in enumerate(clusters)}
+        
+        for cluster in clusters:
+            mask = plot_df["cluster"] == cluster
+            label_text = f"Cluster {cluster}" if cluster >= 0 else "Unassigned"
+            plt.scatter(
+                plot_df[mask]["x"],
+                plot_df[mask]["y"],
+                c=[cluster_colors[cluster]],
+                label=label_text,
+                s=30,
+                alpha=0.7,
+                edgecolors="black" if cluster >= 0 else "gray",
+                linewidth=0.5 if cluster >= 0 else 0.3,
+            )
+        
+        plt.title(f"'{keyword}' embeddings — {label} (Colored by Cluster)")
+        plt.xlabel(f"{label} 1")
+        plt.ylabel(f"{label} 2")
+        plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=9)
+        plt.tight_layout()
+        plt.savefig(fig_dir / f"embeddings_{keyword}_{method}.png", dpi=130, bbox_inches="tight")
+        plt.close()
+    else:
+        # Fallback: single color if no clusters found
+        fig = px.scatter(
+            plot_df,
+            x="x",
+            y="y",
+            hover_data=["name"],
+            title=f"'{keyword}' embeddings — {label}",
+        )
+        fig.write_html(fig_dir / f"embeddings_{keyword}_{method}.html")
+        
+        plt.figure(figsize=(9, 7))
+        plt.scatter(coords[:, 0], coords[:, 1], s=20, alpha=0.6, color="#3498db")
+        plt.title(f"'{keyword}' embeddings — {label}")
+        plt.tight_layout()
+        plt.savefig(fig_dir / f"embeddings_{keyword}_{method}.png", dpi=130)
+        plt.close()
+    
     logger.info(f"  Saved visualisation for '{keyword}' → {fig_dir}/")
 
 
