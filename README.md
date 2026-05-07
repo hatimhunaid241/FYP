@@ -1,6 +1,6 @@
 # HKTVmall Semantic Search Project
 
-**Team:** Sutanto, Winiera | Suhandjaja, Alexander Gaudi | Quettawalla, Hatim
+**Team:** Sutanto, Winiera | Suhandjaja, Alexander Gaudi | Quettawala, Hatim
 
 ## Overview
 

@@ -37,3 +37,15 @@ data/embeddings/*
 !data/embeddings/.gitkeep
 logs/
 *.log
+
+# latex
+*.aux
+*.lof
+*.lot
+*.fls
+*.out
+*.toc
+*.fdb_latexmk
+*.synctex.gz
+*.tex
+report.pdf

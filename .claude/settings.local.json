@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Hatim\\\\Documents\\\\Hatim\\\\FYP\" -Recurse | Select-Object -ExpandProperty FullName | ForEach-Object { $_ -replace [regex]::Escape\\(\"C:\\\\Users\\\\Hatim\\\\Documents\\\\Hatim\\\\FYP\"\\), \".\" } | Sort-Object)",
+      "WebSearch",
+      "Bash(pdflatex -interaction=nonstopmode report.tex)",
+      "Bash(Select-String -Path report.log -Pattern \"^!\")",
+      "Bash(Select-Object -First 10)",
+      "WebFetch(domain:dl.acm.org)",
+      "WebFetch(domain:papers.nips.cc)",
+      "WebFetch(domain:ir.webis.de)",
+      "WebFetch(domain:books.google.com)",
+      "WebFetch(domain:aaai.org)",
+      "WebFetch(domain:books.google.ca)"
+    ]
+  }
+}
